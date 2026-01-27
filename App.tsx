@@ -711,23 +711,20 @@ const CartView = ({ cart, setCart, settings, setCurrentView, user, setUser, setO
   };
 
 const handleFinishOrder = async () => {
-    // 1. Cálculos de valores e cashback
     const earned = !useCashback ? subtotal * settings.cashbackPercentage : 0;
     const cashbackDiscountAmount = useCashback ? Math.min(user?.cashbackBalance || 0, subtotal) : 0;
     
-    // 2. Tentar salvar no Firebase
     try {
       if (!user) {
         alert("Erro: Usuário não identificado.");
         return;
       }
 
-      // Criamos o objeto que vai para o Banco de Dados
       const orderData = {
         userId: user.id,
         customerName: user.name || 'Cliente',
         customerPhone: user.phone || 'Não informado',
-        address: user.address || {}, // Garante que o objeto de endereço vá
+        address: user.address || {}, 
         date: new Date().toISOString(),
         createdAt: serverTimestamp(),
         items: cart, 
@@ -736,23 +733,20 @@ const handleFinishOrder = async () => {
         deliveryFee: currentDeliveryFee,
         paymentMethod: paymentMethod,
         paymentDetail: paymentMethod === 'money' ? `Troco para ${cashGiven}` : (cardType || ''),
-        deliveryMethod: deliveryMethod, // 'delivery' ou 'pickup'
+        deliveryMethod: deliveryMethod,
         status: 'received',
         deliveryCode: Math.floor(1000 + Math.random() * 9000).toString(),
         cashbackEarned: earned,
         cashbackUsed: cashbackDiscountAmount
       };
 
-      // Envia para a coleção "orders"
       await addDoc(collection(db, "orders"), orderData);
 
-      // Atualiza o saldo de cashback do usuário no banco
       const newBalance = (user.cashbackBalance || 0) - cashbackDiscountAmount + earned;
       await updateDoc(doc(db, "users", user.id), {
         cashbackBalance: newBalance
       });
 
-      // 3. Sucesso: Atualiza o estado local e limpa carrinho
       setUser((prev: any) => ({ 
         ...prev, 
         cashbackBalance: newBalance 
@@ -763,36 +757,11 @@ const handleFinishOrder = async () => {
       setCurrentView('order-success');
 
     } catch (error) {
-      console.error("Erro crítico ao salvar pedido:", error);
-      alert("Erro ao conectar com o banco de dados. Verifique sua internet.");
+      console.error("Erro ao salvar pedido:", error);
+      alert("Erro ao conectar com o banco de dados.");
     }
-  };
-
-    // 4. MANTÉM SUAS FUNÇÕES VISUAIS (O que já funcionava antes)
-    setUser((prev: User) => ({ 
-      ...prev, 
-      cashbackBalance: (prev.cashbackBalance || 0) - (useCashback ? cashbackDiscount : 0) + earned 
-    }));
-    
-    setCart([]);
-    setEarnedCashback(earned);
-    setCurrentView('order-success');
-  };
-    
-    const finalBalance = (user?.cashbackBalance || 0) - cashbackDiscount + earned;
-    
-    setUser((prev: User) => ({
-      ...prev,
-      cashbackBalance: finalBalance,
-      orderHistory: [...(prev.orderHistory || []), newOrder]
-    }));
-
-    setOrders((prev: Order[]) => [...prev, newOrder]);
-    setCart([]);
-    setEarnedCashback(earned);
-    setCurrentView('order-success');
-  };
-
+  }; // <--- Esta é a chave da linha 794 que deve fechar a função corretamente.
+  
   const renderPaymentContent = () => {
     if (total <= 0) return (
       <div className="bg-green-50 p-4 rounded-xl border border-green-200 text-green-700 text-center animate-fade-in">
