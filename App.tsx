@@ -1,4 +1,7 @@
-import { doc, setDoc } from 'firebase/firestore';
+import { 
+  doc, setDoc, addDoc, collection, updateDoc, serverTimestamp, getDoc,
+  onSnapshot, query, orderBy // <--- Adicione estes três
+} from 'firebase/firestore';
 import React, { useState, useMemo, useEffect, CSSProperties, useRef } from 'react';
 import { 
   Settings, LogOut, TrendingUp, Package, Sparkles, Trash2, 
@@ -1971,7 +1974,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [earnedCashback, setEarnedCashback] = useState(0);
 
-  // Initial mock data for customers to populate the Admin list
+  // Lista de usuários (inicialmente local, pode ser expandida para carregar do Firebase depois)
   const [allUsers, setAllUsers] = useState<User[]>([
     {
         id: 'c1',
@@ -1996,12 +1999,11 @@ export default function App() {
     }
   ]);
 
-  // Auth Listener
+  // 1. Monitor de Autenticação
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
-        // User is signed in, see docs for a list of available properties
-        // https://firebase.google.com/docs/reference/js/auth.user
+        // Define se é admin pelo e-mail (ajuste conforme seu e-mail de admin)
         const isAdmin = currentUser.email === 'admin@hortal.com';
         
         setUser({
@@ -2009,23 +2011,42 @@ export default function App() {
           name: currentUser.displayName || 'Cliente',
           email: currentUser.email || '',
           role: isAdmin ? 'admin' : 'customer',
-          cashbackBalance: 0, // In a real app, fetch from Firestore
-          orderHistory: [],   // In a real app, fetch from Firestore
-          address: { zipCode: '', street: '', number: '', neighborhood: '', city: '', state: '' } // In a real app, fetch from Firestore
+          cashbackBalance: 0, 
+          orderHistory: [],
+          address: { zipCode: '', street: '', number: '', neighborhood: '', city: '', state: '' }
         });
 
         setCurrentView(isAdmin ? 'admin' : 'shop');
       } else {
-        // User is signed out
         setUser(null);
         setCurrentView('login');
       }
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
+  // 2. NOVO: Monitor de Pedidos em Tempo Real (Para o Admin)
+  useEffect(() => {
+    // Só executa se o usuário logado for admin
+    if (user && user.role === 'admin') {
+      const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+      
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const ordersData: Order[] = [];
+        querySnapshot.forEach((doc) => {
+          // Converte os dados do Firebase e injeta o ID do documento
+          ordersData.push({ id: doc.id, ...doc.data() } as Order);
+        });
+        // Atualiza o estado global de pedidos
+        setOrders(ordersData);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [user?.role]);
+
+  // Renderização das Telas
   return (
     <>
       {currentView === 'login' && <LoginView setCurrentView={setCurrentView} setUser={setUser} setAllUsers={setAllUsers} />}
