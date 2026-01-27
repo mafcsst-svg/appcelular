@@ -9,6 +9,5 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
     },
   },
-  // Adicione isso para garantir que o Vite processe as variáveis
-  envPrefix: 'VITE_', 
+  // Removemos o bloco 'define' que estava sobrescrevendo suas chaves
 });
