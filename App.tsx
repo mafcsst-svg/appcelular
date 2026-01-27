@@ -1052,8 +1052,28 @@ const AdminView = ({ products, setProducts, settings, setSettings, setCurrentVie
     setAdminInput('');
   };
 
-  const handleUpdateStatus = (orderId: string, nextStatus: OrderStatus) => {
-    setOrders((prev: Order[]) => prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
+ const handleUpdateStatus = async (orderId: string, nextStatus: OrderStatus) => {
+    // 1. Atualiza no Banco de Dados (Firebase)
+    try {
+      // Cria a referência para o documento do pedido
+      const orderRef = doc(db, "orders", orderId);
+      
+      // Envia a atualização de status
+      await updateDoc(orderRef, {
+        status: nextStatus
+      });
+      
+      console.log(`Pedido ${orderId} atualizado para ${nextStatus}`);
+    } catch (error) {
+      console.error("Erro ao atualizar status no Firebase:", error);
+      alert("Não foi possível salvar a alteração de status no banco de dados.");
+      return; // Para o código aqui se der erro no banco
+    }
+
+    // 2. Atualiza a tela (Estado local)
+    setOrders((prev: Order[]) => 
+      prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o)
+    );
   };
 
   const handleCancelOrder = (order: Order) => {
