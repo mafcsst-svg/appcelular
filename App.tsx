@@ -701,26 +701,56 @@ const CartView = ({ cart, setCart, settings, setCurrentView, user, setUser, setO
     }).filter(item => item.quantity > 0));
   };
 
-  const handleFinishOrder = () => {
-    // Update user cashback balance: Deduct used, Add earned
+  const handleFinishOrder = async () => { // Adicione o 'async' aqui no início
+    // 1. Calcula o cashback (mantendo sua lógica original)
     const earned = !useCashback ? subtotal * settings.cashbackPercentage : 0;
     
-    const newOrder: Order = {
-      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
-      customerName: user?.name || 'Cliente',
-      customerPhone: user?.phone || '(17) 99999-9999',
-      address: user?.address as Address,
-      date: new Date().toISOString(),
-      items: [...cart],
-      subtotal,
-      total,
-      deliveryFee: currentDeliveryFee,
-      paymentMethod,
-      paymentDetail: paymentMethod === 'money' ? `Troco para ${cashGiven}` : (cardType || ''),
-      status: 'received',
-      deliveryCode: Math.floor(1000 + Math.random() * 9000).toString(),
-      cashbackEarned: earned
-    };
+    // 2. SALVAMENTO NO FIREBASE (Substituindo a criação do objeto local)
+    try {
+      if (user) {
+        // Criamos o documento no Firestore
+        await addDoc(collection(db, "orders"), {
+          userId: user.id,
+          customerName: user.name || 'Cliente',
+          customerPhone: user.phone || 'Não informado',
+          // Enviamos o endereço completo para o Admin ver
+          address: user.address, 
+          date: new Date().toISOString(),
+          createdAt: serverTimestamp(), // Data oficial do servidor para ordenação
+          items: cart, // Todos os itens do carrinho
+          subtotal: subtotal,
+          total: total,
+          deliveryFee: currentDeliveryFee,
+          paymentMethod: paymentMethod,
+          paymentDetail: paymentMethod === 'money' ? `Troco para ${cashGiven}` : (cardType || ''),
+          status: 'received',
+          deliveryMethod: deliveryMethod, // 'delivery' ou 'pickup'
+          deliveryCode: Math.floor(1000 + Math.random() * 9000).toString(),
+          cashbackEarned: earned
+        });
+
+        // 3. Atualiza o saldo de cashback do usuário no Firebase
+        const newBalance = (user.cashbackBalance || 0) - (useCashback ? cashbackDiscount : 0) + earned;
+        await updateDoc(doc(db, "users", user.id), {
+          cashbackBalance: newBalance
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao salvar pedido no Firebase:", error);
+      alert("Erro ao processar pedido. Verifique sua conexão.");
+      return; // Interrompe a função se der erro no banco
+    }
+
+    // 4. MANTÉM SUAS FUNÇÕES VISUAIS (O que já funcionava antes)
+    setUser((prev: User) => ({ 
+      ...prev, 
+      cashbackBalance: (prev.cashbackBalance || 0) - (useCashback ? cashbackDiscount : 0) + earned 
+    }));
+    
+    setCart([]);
+    setEarnedCashback(earned);
+    setCurrentView('order-success');
+  };
     
     const finalBalance = (user?.cashbackBalance || 0) - cashbackDiscount + earned;
     
