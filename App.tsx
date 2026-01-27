@@ -1,4 +1,4 @@
-import { doc, setDoc } from 'firebase/firestore
+import { doc, setDoc } from 'firebase/firestore';
 import React, { useState, useMemo, useEffect, CSSProperties, useRef } from 'react';
 import { 
   Settings, LogOut, TrendingUp, Package, Sparkles, Trash2, 
