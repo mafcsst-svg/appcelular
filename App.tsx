@@ -720,25 +720,37 @@ const handleFinishOrder = async () => {
         return;
       }
 
-      const orderData = {
-        userId: user.id,
-        customerName: user.name || 'Cliente',
-        customerPhone: user.phone || 'Não informado',
-        address: user.address || {}, 
+const orderData = {
+        userId: user?.id || 'id_desconhecido',
+        customerName: user?.name || 'Cliente',
+        customerPhone: user?.phone || 'Não informado',
+        // Se user.address for undefined, enviamos strings vazias em vez de um objeto vazio
+        address: {
+          street: user?.address?.street || '',
+          number: user?.address?.number || '',
+          neighborhood: user?.address?.neighborhood || '',
+          city: user?.address?.city || ''
+        },
         date: new Date().toISOString(),
         createdAt: serverTimestamp(),
-        items: cart, 
-        subtotal: subtotal,
-        total: total,
-        deliveryFee: currentDeliveryFee,
-        paymentMethod: paymentMethod,
+        // Garante que o array de itens não tenha valores nulos ou preços "quebrados"
+        items: cart.map(item => ({
+          name: item.name,
+          price: Number(item.price) || 0,
+          quantity: Number(item.quantity) || 0
+        })), 
+        subtotal: Number(subtotal) || 0,
+        total: Number(total) || 0,
+        deliveryFee: Number(currentDeliveryFee) || 0,
+        paymentMethod: paymentMethod || 'pix',
         paymentDetail: paymentMethod === 'money' ? `Troco para ${cashGiven}` : (cardType || ''),
-        deliveryMethod: deliveryMethod,
+        deliveryMethod: deliveryMethod || 'pickup',
         status: 'received',
         deliveryCode: Math.floor(1000 + Math.random() * 9000).toString(),
-        cashbackEarned: earned,
-        cashbackUsed: cashbackDiscountAmount
+        cashbackEarned: Number(earned) || 0,
+        cashbackUsed: Number(cashbackDiscountAmount) || 0
       };
+      
 
       await addDoc(collection(db, "orders"), orderData);
 
