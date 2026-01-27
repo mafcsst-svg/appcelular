@@ -17,6 +17,9 @@ import {
 import { Product, ProductCategory, AppSettings, ViewState, CartItem, User, Address, Order, OrderStatus, Message } from './types';
 import { generateProductDescription, suggestPrice } from './services/geminiService';
 import { INITIAL_PRODUCTS, INITIAL_SETTINGS, APP_NAME, APP_SUBTITLE } from './constants';
+// Importa a conexão com o Firebase e Auth
+import { db, auth } from './services/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged } from "firebase/auth";
 
 // --- UI Components ---
 
@@ -155,7 +158,7 @@ const OrderTrackingView = ({ orders, setCurrentView, setOrders }: any) => {
     const cancelledOrder = orders.find((o: Order) => o.status === 'cancelled');
     if (cancelledOrder) {
          return (
-            <div className="min-h-screen bg-stone-55 flex flex-col items-center justify-center p-8 text-center">
+            <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-8 text-center">
                 <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center text-red-500 mb-4">
                     <XCircle size={40} />
                 </div>
@@ -1232,7 +1235,10 @@ const AdminView = ({ products, setProducts, settings, setSettings, setCurrentVie
       <div className="bg-stone-900 text-white p-6 rounded-b-[30px] mb-6 shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold flex items-center gap-2"><Settings className="text-brand-50" /> Admin</h2>
-          <button onClick={() => setCurrentView('login')} className="bg-stone-800 p-2 rounded-lg hover:bg-stone-700 transition-colors"><LogOut size={18}/></button>
+          <button onClick={() => {
+            signOut(auth);
+            setCurrentView('login');
+          }} className="bg-stone-800 p-2 rounded-lg hover:bg-stone-700 transition-colors"><LogOut size={18}/></button>
         </div>
         <div className="flex gap-4 overflow-x-auto no-scrollbar">
           {[
@@ -1773,7 +1779,10 @@ const ShopView = ({ products, cart, setCart, setCurrentView, settings, orders, u
                   <UserIcon size={20} className="text-stone-600"/>
                 </button>
                 <button 
-                  onClick={() => setCurrentView('login')} 
+                  onClick={() => {
+                    signOut(auth);
+                    setCurrentView('login');
+                  }} 
                   className="p-2.5 bg-stone-100 rounded-full hover:bg-red-50 hover:text-red-500 transition-all"
                   title="Sair"
                 >
@@ -1868,26 +1877,34 @@ const ShopView = ({ products, cart, setCart, setCurrentView, settings, orders, u
 const LoginView = ({ setCurrentView, setUser, setAllUsers }: any) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({ name: '', email: '', password: '', cpf: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      if (formData.email === 'admin@hortal.com') { setCurrentView('admin'); return; }
-      
-      const newUser = { id: Date.now().toString(), name: formData.name || 'Cliente Hortal', email: formData.email, cpf: formData.cpf, role: 'customer' as const, cashbackBalance: 25.00, orderHistory: [], address: { zipCode: '', street: '', number: '', neighborhood: '', city: '', state: '' } };
-      
-      setUser(newUser);
-      
-      // Add new user to the global list if registering
-      if (isRegistering && setAllUsers) {
-        setAllUsers((prev: User[]) => [...prev, newUser]);
+    setErrorMsg('');
+
+    try {
+      if (isRegistering) {
+        if (!formData.name) throw new Error("Por favor, informe seu nome.");
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        await updateProfile(userCredential.user, { displayName: formData.name });
+        // NOTE: In a complete app, we would save CPF and other details to Firestore here
+      } else {
+        await signInWithEmailAndPassword(auth, formData.email, formData.password);
       }
       
-      setCurrentView('shop');
-    }, 1000);
+      // Navigation is handled by the onAuthStateChanged listener in App component
+    } catch (error: any) {
+      console.error(error);
+      let msg = "Ocorreu um erro. Tente novamente.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') msg = "E-mail ou senha incorretos.";
+      if (error.code === 'auth/email-already-in-use') msg = "Este e-mail já está cadastrado.";
+      if (error.code === 'auth/weak-password') msg = "A senha deve ter pelo menos 6 caracteres.";
+      setErrorMsg(msg);
+      setIsLoading(false); // Stop loading only on error, otherwise let the view switch
+    }
   };
 
   return (
@@ -1906,9 +1923,13 @@ const LoginView = ({ setCurrentView, setUser, setAllUsers }: any) => {
              {isRegistering && <Input placeholder="Nome Completo" icon={<UserIcon size={18} />} value={formData.name} onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} />}
              <Input placeholder="E-mail" type="email" icon={<Mail size={18} />} value={formData.email} onChange={(e: any) => setFormData({ ...formData, email: e.target.value })} />
              <Input placeholder="Senha" type="password" icon={<Lock size={18} />} value={formData.password} onChange={(e: any) => setFormData({ ...formData, password: e.target.value })} />
+             {isRegistering && <Input placeholder="CPF (Opcional)" icon={<FileText size={18} />} value={formData.cpf} onChange={(e: any) => setFormData({ ...formData, cpf: e.target.value })} />}
+             
+             {errorMsg && <p className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg border border-red-900/50">{errorMsg}</p>}
+             
              <Button type="submit" className="w-full mt-2 bg-brand-500 hover:bg-brand-600" isLoading={isLoading}>{isRegistering ? 'Cadastrar' : 'Entrar'}</Button>
           </form>
-          <button onClick={() => setIsRegistering(!isRegistering)} className="w-full text-center mt-6 text-sm text-stone-400">{isRegistering ? 'Já tem conta? Entrar' : 'Não tem conta? Registre-se'}</button>
+          <button type="button" onClick={() => { setIsRegistering(!isRegistering); setErrorMsg(''); }} className="w-full text-center mt-6 text-sm text-stone-400 hover:text-white transition-colors">{isRegistering ? 'Já tem conta? Entrar' : 'Não tem conta? Registre-se'}</button>
        </div>
        <div className="z-10 w-full text-center py-6 mt-8 border-t border-stone-800/50 text-xs text-stone-500">
           Padaria Hortal<br />
@@ -1956,6 +1977,36 @@ export default function App() {
         address: { zipCode: '14701-000', street: 'Av. Paulista', number: '500', neighborhood: 'Jardim', city: 'Bebedouro', state: 'SP' }
     }
   ]);
+
+  // Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/auth.user
+        const isAdmin = currentUser.email === 'admin@hortal.com';
+        
+        setUser({
+          id: currentUser.uid,
+          name: currentUser.displayName || 'Cliente',
+          email: currentUser.email || '',
+          role: isAdmin ? 'admin' : 'customer',
+          cashbackBalance: 0, // In a real app, fetch from Firestore
+          orderHistory: [],   // In a real app, fetch from Firestore
+          address: { zipCode: '', street: '', number: '', neighborhood: '', city: '', state: '' } // In a real app, fetch from Firestore
+        });
+
+        setCurrentView(isAdmin ? 'admin' : 'shop');
+      } else {
+        // User is signed out
+        setUser(null);
+        setCurrentView('login');
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   return (
     <>
