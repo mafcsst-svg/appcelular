@@ -31,9 +31,7 @@
       }
 
       // Polyfill process for environment variables to prevent crashes in services
-      if (typeof process === 'undefined') {
-        window.process = { env: { API_KEY: '' } };
-      }
+      
       
       // Global error handler to catch load errors
       window.addEventListener('error', function(e) {
