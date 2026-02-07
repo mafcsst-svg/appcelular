@@ -1,20 +1,15 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
 
-// No Vite, chamamos as variáveis diretamente para garantir o "carimbo" no build
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyCnQCTjQWU-3bs4x1P0nM8N_0WHd1iM6oE",
+  authDomain: "gen-lang-client-0901917179.firebaseapp.com",
+  projectId: "gen-lang-client-0901917179",
+  storageBucket: "gen-lang-client-0901917179.firebasestorage.app",
+  messagingSenderId: "685332763707",
+  appId: "1:685332763707:web:8b8d6b91c4b35be177f81e",
+  measurementId: "G-CP10J2HXVB"
 };
 
-// Inicialização direta
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-export { db, auth };
+export const db = getFirestore(app);
