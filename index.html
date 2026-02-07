@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -32,7 +33,18 @@
 
       // Polyfill process for environment variables to prevent crashes in services
       if (typeof process === 'undefined') {
-        window.process = { env: { API_KEY: '' } };
+        window.process = { 
+          env: { 
+            API_KEY: '',
+            // Placeholders for Firebase Config to prevent immediate crashes if not set
+            FIREBASE_API_KEY: '',
+            FIREBASE_AUTH_DOMAIN: '',
+            FIREBASE_PROJECT_ID: '',
+            FIREBASE_STORAGE_BUCKET: '',
+            FIREBASE_MESSAGING_SENDER_ID: '',
+            FIREBASE_APP_ID: ''
+          } 
+        };
       }
       
       // Global error handler to catch load errors
@@ -79,14 +91,17 @@
     "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom&dev",
     "lucide-react": "https://esm.sh/lucide-react@0.453.0?external=react&dev",
     "react-window": "https://esm.sh/react-window@1.8.10?external=react,react-dom",
-    "react-virtualized-auto-sizer": "https://esm.sh/react-virtualized-auto-sizer@1.0.24?external=react,react-dom"
+    "react-virtualized-auto-sizer": "https://esm.sh/react-virtualized-auto-sizer@1.0.24?external=react,react-dom",
+    "firebase/app": "https://esm.sh/firebase@10.12.2/app",
+    "firebase/auth": "https://esm.sh/firebase@10.12.2/auth",
+    "firebase/firestore": "https://esm.sh/firebase@10.12.2/firestore",
+    "firebase/storage": "https://esm.sh/firebase@10.12.2/storage",
+    "firebase/": "https://esm.sh/firebase@^12.9.0/"
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-gray-100 text-stone-800 antialiased selection:bg-brand-200">
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+  </body>
 </html>
