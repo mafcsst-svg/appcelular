@@ -31,7 +31,9 @@
       }
 
       // Polyfill process for environment variables to prevent crashes in services
-      
+      if (typeof process === 'undefined') {
+        window.process = { env: { API_KEY: '' } };
+      }
       
       // Global error handler to catch load errors
       window.addEventListener('error', function(e) {
@@ -63,12 +65,28 @@
         background-color: #f3f4f6; /* Light gray background */
       }
     </style>
-    
- <script type="module" src="/index.tsx"></script>
-    
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1?dev",
+    "react/": "https://esm.sh/react@18.3.1/?dev",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime?dev",
+    "react/jsx-dev-runtime": "https://esm.sh/react@18.3.1/jsx-dev-runtime?dev",
+    "react-dom": "https://esm.sh/react-dom@18.3.1?dev",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?dev",
+    "react-dom/": "https://esm.sh/react-dom@18.3.1/?dev",
+    "@google/genai": "https://esm.sh/@google/genai",
+    "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom&dev",
+    "lucide-react": "https://esm.sh/lucide-react@0.453.0?external=react&dev",
+    "react-window": "https://esm.sh/react-window@1.8.10?external=react,react-dom",
+    "react-virtualized-auto-sizer": "https://esm.sh/react-virtualized-auto-sizer@1.0.24?external=react,react-dom"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-gray-100 text-stone-800 antialiased selection:bg-brand-200">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script> 
-  </body>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>
