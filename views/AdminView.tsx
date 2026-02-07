@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   Settings, LogOut, TrendingUp, Package, Sparkles, UserPlus, Users, MessageSquare, UtensilsCrossed, 
   MapPin, Phone, CreditCard, Printer, Search, Minus, Plus, Edit3, Eye, EyeOff, Save, X, CheckCircle2,
-  Truck, ShoppingBag, Image as ImageIcon, AlignLeft, Upload, Loader2
+  Truck, ShoppingBag, Image as ImageIcon, AlignLeft, Upload
 } from 'lucide-react';
 import { Button, Input } from '../components/UI';
 import { useUser } from '../contexts/UserContext';
@@ -33,7 +33,6 @@ export const AdminView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =
 
   // Customer Management State
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
-  const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
     name: '', email: '', phone: '', cpf: '',
     zipCode: '', street: '', number: '', neighborhood: '', city: '', state: 'SP'
@@ -290,35 +289,6 @@ export const AdminView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =
     setManualCustomer({ name: '', phone: '', zip: '', street: '', number: '', neighborhood: '', city: '' });
     setActiveTab('orders');
     alert(`Pedido manual criado com sucesso! (${manualFulfillment === 'pickup' ? 'Retirada' : 'Entrega'})`);
-  };
-
-  const handleNewCustomerChange = async (field: string, value: string) => {
-    setNewCustomer(prev => ({ ...prev, [field]: value }));
-
-    if (field === 'zipCode') {
-        const cleanCep = value.replace(/\D/g, '');
-        if (cleanCep.length === 8) {
-            setIsLoadingCep(true);
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-                const data = await response.json();
-                
-                if (!data.erro) {
-                    setNewCustomer(prev => ({
-                        ...prev,
-                        street: data.logradouro,
-                        neighborhood: data.bairro,
-                        city: data.localidade,
-                        state: data.uf,
-                    }));
-                }
-            } catch (error) {
-                console.error("Erro ao buscar CEP:", error);
-            } finally {
-                setIsLoadingCep(false);
-            }
-        }
-    }
   };
 
   const handleRegisterCustomer = () => {
@@ -653,32 +623,26 @@ export const AdminView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =
                    <button onClick={() => setShowNewCustomerForm(false)} className="absolute top-2 right-2 text-stone-400 hover:text-red-500"><X size={18} /></button>
                    <h4 className="text-sm font-bold text-stone-800">Novo Cadastro</h4>
                    
-                   <Input label="Nome Completo" value={newCustomer.name} onChange={(e: any) => handleNewCustomerChange('name', e.target.value)} />
+                   <Input label="Nome Completo" value={newCustomer.name} onChange={(e: any) => setNewCustomer({...newCustomer, name: e.target.value})} />
                    <div className="grid grid-cols-2 gap-2">
-                      <Input label="Telefone" value={newCustomer.phone} onChange={(e: any) => handleNewCustomerChange('phone', e.target.value)} />
-                      <Input label="Email (Opcional)" value={newCustomer.email} onChange={(e: any) => handleNewCustomerChange('email', e.target.value)} />
+                      <Input label="Telefone" value={newCustomer.phone} onChange={(e: any) => setNewCustomer({...newCustomer, phone: e.target.value})} />
+                      <Input label="Email (Opcional)" value={newCustomer.email} onChange={(e: any) => setNewCustomer({...newCustomer, email: e.target.value})} />
                    </div>
                    
                    <h5 className="text-xs font-bold text-stone-400 mt-2">Endereço</h5>
                    <div className="grid grid-cols-3 gap-2">
-                      <Input 
-                        label="CEP" 
-                        value={newCustomer.zipCode} 
-                        onChange={(e: any) => handleNewCustomerChange('zipCode', e.target.value)} 
-                        maxLength={9}
-                        icon={isLoadingCep ? <Loader2 className="animate-spin text-brand-500" size={14} /> : null}
-                      />
+                      <Input label="CEP" value={newCustomer.zipCode} onChange={(e: any) => setNewCustomer({...newCustomer, zipCode: e.target.value})} />
                       <div className="col-span-2">
-                         <Input label="Cidade" value={newCustomer.city} onChange={(e: any) => handleNewCustomerChange('city', e.target.value)} />
+                         <Input label="Cidade" value={newCustomer.city} onChange={(e: any) => setNewCustomer({...newCustomer, city: e.target.value})} />
                       </div>
                    </div>
                    <div className="grid grid-cols-3 gap-2">
                       <div className="col-span-2">
-                        <Input label="Rua" value={newCustomer.street} onChange={(e: any) => handleNewCustomerChange('street', e.target.value)} />
+                        <Input label="Rua" value={newCustomer.street} onChange={(e: any) => setNewCustomer({...newCustomer, street: e.target.value})} />
                       </div>
-                      <Input label="Nº" value={newCustomer.number} onChange={(e: any) => handleNewCustomerChange('number', e.target.value)} />
+                      <Input label="Nº" value={newCustomer.number} onChange={(e: any) => setNewCustomer({...newCustomer, number: e.target.value})} />
                    </div>
-                   <Input label="Bairro" value={newCustomer.neighborhood} onChange={(e: any) => handleNewCustomerChange('neighborhood', e.target.value)} />
+                   <Input label="Bairro" value={newCustomer.neighborhood} onChange={(e: any) => setNewCustomer({...newCustomer, neighborhood: e.target.value})} />
 
                    <Button onClick={handleRegisterCustomer} disabled={!newCustomer.name} className="w-full mt-2 bg-green-600 hover:bg-green-700">
                       <Save size={16} /> Salvar Cliente

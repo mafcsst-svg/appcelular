@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, User as UserIcon, MapPin, Loader2, CheckCircle2, Cloud } from 'lucide-react';
-import { Input } from '../components/UI';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, User as UserIcon, MapPin, Loader2, Save, CheckCircle2 } from 'lucide-react';
+import { Button, Input } from '../components/UI';
 import { useUser } from '../contexts/UserContext';
 import { useOrder } from '../contexts/OrderContext';
 import { ViewState } from '../types';
@@ -8,12 +8,10 @@ import { ViewState } from '../types';
 export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState) => void }) => {
   const { user, updateUserProfile } = useUser();
   const { cart } = useOrder();
-  
-  // Status de salvamento
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'typing'>('saved');
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   
-  // Inicialização do form apenas uma vez para evitar re-renderização durante a digitação
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -30,43 +28,26 @@ export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState)
     }
   });
 
-  // Ref para controlar o debounce do salvamento
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Ref para evitar salvamento na montagem inicial
-  const isFirstRender = useRef(true);
-
-  // Efeito para Auto-Save
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        cpf: user.cpf || '',
+        address: {
+          zipCode: user.address?.zipCode || '',
+          street: user.address?.street || '',
+          number: user.address?.number || '',
+          complement: user.address?.complement || '',
+          neighborhood: user.address?.neighborhood || '',
+          city: user.address?.city || '',
+          state: user.address?.state || ''
+        }
+      }));
     }
-
-    setSaveStatus('saving');
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      if (user) {
-        const updatedUser = {
-          ...user,
-          ...formData
-        };
-        updateUserProfile(updatedUser);
-        setSaveStatus('saved');
-      }
-    }, 800); // Salva 800ms após parar de digitar
-
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [formData, updateUserProfile]); // Removido 'user' das dependências para evitar loop
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  }, [user]);
 
   const handleAddressChange = async (field: string, value: string) => {
     setFormData((prev: any) => ({
@@ -83,7 +64,6 @@ export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState)
                 const data = await response.json();
                 
                 if (!data.erro) {
-                    // Atualiza o form e força o salvamento logo após
                     setFormData((prev: any) => ({
                         ...prev,
                         address: {
@@ -104,33 +84,49 @@ export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState)
     }
   };
 
+  const handleSave = () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    
+    // Cria o objeto de usuário atualizado mantendo ID e outros campos
+    const updatedUser = {
+      ...user,
+      ...formData
+    };
+
+    // Usa a função do contexto que atualiza tanto a sessão quanto a lista persistida
+    updateUserProfile(updatedUser);
+    
+    setTimeout(() => {
+      setIsSaving(false);
+      setShowSuccess(true);
+      
+      setTimeout(() => {
+        setShowSuccess(false);
+        if (cart.length > 0) {
+          setCurrentView('cart');
+        } else {
+          setCurrentView('shop');
+        }
+      }, 1000);
+    }, 800);
+  };
+
   return (
     <div className="bg-stone-50 min-h-screen pb-24">
-       <div className="bg-white p-4 sticky top-0 z-30 shadow-sm flex items-center justify-between">
+       <div className="bg-white p-4 sticky top-0 z-10 shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => setCurrentView(cart.length > 0 ? 'cart' : 'shop')} className="p-2 hover:bg-stone-100 rounded-full">
               <ChevronLeft size={24} className="text-stone-600" />
             </button>
-            <div>
-                <h1 className="text-lg font-bold text-stone-800 leading-none">Meu Perfil</h1>
-                <p className="text-[10px] text-stone-400 font-medium mt-0.5">Edição em tempo real</p>
-            </div>
+            <h1 className="text-lg font-bold text-stone-800">Meu Perfil</h1>
           </div>
-          
-          <div className="flex items-center gap-2">
-            {saveStatus === 'saving' && (
-                <div className="flex items-center gap-1.5 text-stone-400 bg-stone-50 px-3 py-1.5 rounded-full border border-stone-100">
-                    <Loader2 size={12} className="animate-spin" />
-                    <span className="text-xs font-bold">Salvando...</span>
-                </div>
-            )}
-            {saveStatus === 'saved' && (
-                <div className="flex items-center gap-1.5 text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-100 transition-all animate-fade-in">
-                    <CheckCircle2 size={12} />
-                    <span className="text-xs font-bold">Salvo</span>
-                </div>
-            )}
-          </div>
+          {showSuccess && (
+            <span className="text-sm text-green-600 font-medium flex items-center gap-1 animate-fade-in bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                <CheckCircle2 size={16} /> Salvo
+            </span>
+          )}
        </div>
 
        <div className="p-4 space-y-6">
@@ -143,27 +139,27 @@ export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState)
              <Input 
                label="Nome Completo" 
                value={formData.name} 
-               onChange={(e: any) => handleInputChange('name', e.target.value)} 
+               onChange={(e: any) => setFormData({...formData, name: e.target.value})} 
              />
              <div className="flex gap-2">
                <Input 
                  label="Telefone (Opcional)" 
                  value={formData.phone} 
-                 onChange={(e: any) => handleInputChange('phone', e.target.value)} 
+                 onChange={(e: any) => setFormData({...formData, phone: e.target.value})} 
                  placeholder="(00) 00000-0000"
                />
                <Input 
                  label="E-mail" 
                  value={formData.email} 
-                 onChange={(e: any) => handleInputChange('email', e.target.value)} 
+                 onChange={(e: any) => setFormData({...formData, email: e.target.value})} 
                  readOnly={true}
-                 className="opacity-70 bg-stone-50 cursor-not-allowed"
+                 className="opacity-70 bg-stone-50"
                />
              </div>
              <Input 
                label="CPF" 
                value={formData.cpf} 
-               onChange={(e: any) => handleInputChange('cpf', e.target.value)} 
+               onChange={(e: any) => setFormData({...formData, cpf: e.target.value})} 
              />
           </div>
 
@@ -235,11 +231,10 @@ export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState)
                </div>
              </div>
           </div>
-          
-          <div className="text-center text-xs text-stone-400 flex items-center justify-center gap-2">
-            <Cloud size={14} />
-            <span>Suas alterações são salvas automaticamente.</span>
-          </div>
+
+          <Button onClick={handleSave} className="w-full" isLoading={isSaving}>
+            <Save size={18} /> Salvar Alterações
+          </Button>
        </div>
     </div>
   );

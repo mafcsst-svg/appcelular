@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Store, User as UserIcon, Mail, Lock, Phone, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Store, User as UserIcon, Mail, Lock, Phone, AlertCircle } from 'lucide-react';
 import { Button, Input } from '../components/UI';
 import { APP_NAME } from '../constants';
 import { useUser } from '../contexts/UserContext';
@@ -10,7 +10,6 @@ export const LoginView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', cpf: '' });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -89,16 +88,7 @@ export const LoginView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =
              
              {isRegistering && <Input placeholder="Nome Completo" icon={<UserIcon size={18} />} value={formData.name} onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} />}
              <Input placeholder="E-mail" type="email" icon={<Mail size={18} />} value={formData.email} onChange={(e: any) => setFormData({ ...formData, email: e.target.value })} />
-             
-             <Input 
-               placeholder="Senha" 
-               type={showPassword ? "text" : "password"} 
-               icon={<Lock size={18} />} 
-               rightIcon={showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-               onRightIconClick={() => setShowPassword(!showPassword)}
-               value={formData.password} 
-               onChange={(e: any) => setFormData({ ...formData, password: e.target.value })} 
-             />
+             <Input placeholder="Senha" type="password" icon={<Lock size={18} />} value={formData.password} onChange={(e: any) => setFormData({ ...formData, password: e.target.value })} />
              
              <Button type="submit" className="w-full mt-2 bg-brand-500 hover:bg-brand-600" isLoading={isLoading}>{isRegistering ? 'Cadastrar' : 'Entrar'}</Button>
           </form>
