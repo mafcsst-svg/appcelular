@@ -1,15 +1,26 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
 
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+
+// Configuration typically comes from environment variables.
+// In this environment, you would replace these with your actual Firebase config values
+// or ensure process.env is populated correctly in your build/runtime.
 const firebaseConfig = {
-  apiKey: "AIzaSyCnQCTjQWU-3bs4x1P0nM8N_0WHd1iM6oE",
-  authDomain: "gen-lang-client-0901917179.firebaseapp.com",
-  projectId: "gen-lang-client-0901917179",
-  storageBucket: "gen-lang-client-0901917179.firebasestorage.app",
-  messagingSenderId: "685332763707",
-  appId: "1:685332763707:web:8b8d6b91c4b35be177f81e",
-  measurementId: "G-CP10J2HXVB"
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Export services
+export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
+export default app;
