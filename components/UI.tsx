@@ -18,24 +18,15 @@ export const Button = ({ children, variant = 'primary', className = '', isLoadin
   );
 };
 
-export const Input = ({ label, icon, rightIcon, onRightIconClick, error, ...props }: any) => (
+export const Input = ({ label, icon, error, ...props }: any) => (
   <div className="space-y-1.5 w-full text-left">
     {label && <label className="text-xs font-bold uppercase text-stone-500 tracking-wider ml-1">{label}</label>}
     <div className="relative">
       {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">{icon}</div>}
       <input 
-        className={`w-full ${icon ? 'pl-11' : 'pl-4'} ${rightIcon ? 'pr-12' : 'pr-4'} py-3 rounded-xl bg-white border outline-none focus:ring-4 transition-all font-medium text-stone-700 placeholder:text-stone-300 ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-50' : 'border-stone-200 focus:border-brand-500 focus:ring-brand-50/50'}`}
+        className={`w-full ${icon ? 'pl-11' : 'pl-4'} pr-4 py-3 rounded-xl bg-white border outline-none focus:ring-4 transition-all font-medium text-stone-700 placeholder:text-stone-300 ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-50' : 'border-stone-200 focus:border-brand-500 focus:ring-brand-50/50'}`}
         {...props}
       />
-      {rightIcon && (
-        <button 
-          type="button"
-          onClick={onRightIconClick}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors p-1"
-        >
-          {rightIcon}
-        </button>
-      )}
     </div>
     {error && <span className="text-xs text-red-500 font-medium ml-1">{error}</span>}
   </div>
