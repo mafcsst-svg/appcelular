@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Store, User as UserIcon, Mail, Lock, Phone, AlertCircle, X } from 'lucide-react';
+import { auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from '../services/firebaseConfig';
 import { Button, Input } from '../components/UI';
 import { APP_NAME } from '../constants';
 import { useUser } from '../contexts/UserContext';
-import { ViewState } from '../types';
+import { ViewState, User } from '../types';
 
 export const LoginView = ({ setCurrentView }: { setCurrentView: (v: ViewState) => void }) => {
   const { setUser, allUsers, setAllUsers } = useUser();
@@ -12,58 +13,88 @@ export const LoginView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({ name: '', email: '', password: '', cpf: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const getFriendlyErrorMessage = (errorCode: string) => {
+    switch (errorCode) {
+      case 'auth/invalid-email': return 'E-mail inválido.';
+      case 'auth/user-disabled': return 'Usuário desativado.';
+      case 'auth/user-not-found': return 'Usuário não encontrado.';
+      case 'auth/wrong-password': return 'Senha incorreta.';
+      case 'auth/email-already-in-use': return 'Este e-mail já está cadastrado.';
+      case 'auth/weak-password': return 'A senha deve ter pelo menos 6 caracteres.';
+      case 'auth/invalid-credential': return 'Credenciais inválidas.';
+      default: return 'Ocorreu um erro ao conectar. Tente novamente.';
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    setTimeout(() => {
+    // Login de Admin (Mantido local para demonstração/segurança simples)
+    if (formData.email === 'admin@hortal.com' && formData.password === 'admin') { 
       setIsLoading(false);
-      
-      // Login de Admin (Hardcoded para segurança do exemplo)
-      if (formData.email === 'admin@hortal.com' && formData.password === 'admin') { 
-        setCurrentView('admin'); 
-        return; 
-      }
-      
-      if (isRegistering) {
-        // Lógica de Cadastro
-        const userExists = allUsers.find(u => u.email === formData.email);
-        
-        if (userExists) {
-          setError('Este e-mail já está cadastrado.');
-          return;
-        }
+      setCurrentView('admin'); 
+      return; 
+    }
 
-        const newUser = { 
-          id: Date.now().toString(), 
+    try {
+      if (isRegistering) {
+        // --- CADASTRO NO FIREBASE (MOCK) ---
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        const firebaseUser = userCredential.user;
+
+        // Atualiza o nome de exibição no Firebase Auth
+        await updateProfile(firebaseUser, { displayName: formData.name });
+
+        // Cria o objeto de usuário da aplicação
+        const newUser: User = { 
+          id: firebaseUser.uid, 
           name: formData.name || 'Cliente Hortal', 
-          email: formData.email, 
-          password: formData.password, // Salvando a senha
+          email: firebaseUser.email || formData.email, 
+          phone: '', // Opcional, não vem do Auth padrão
           cpf: formData.cpf, 
-          role: 'customer' as const, 
+          role: 'customer', 
           cashbackBalance: 0.00, 
           orderHistory: [], 
           address: { zipCode: '', street: '', number: '', neighborhood: '', city: '', state: '' } 
         };
         
-        // Atualiza a lista global e define o usuário da sessão
+        // Mantém a compatibilidade com o UserContext (Local State)
         setAllUsers(prev => [...prev, newUser]);
         setUser(newUser);
-        setCurrentView('shop');
-
-      } else {
-        // Lógica de Login
-        const foundUser = allUsers.find(u => u.email === formData.email && u.password === formData.password);
         
-        if (foundUser) {
-          setUser(foundUser);
-          setCurrentView('shop');
-        } else {
-          setError('E-mail ou senha incorretos.');
-        }
+      } else {
+        // --- LOGIN NO FIREBASE (MOCK) ---
+        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        const firebaseUser = userCredential.user;
+
+        // Tenta encontrar dados locais extras (endereço, cashback) se existirem no histórico local
+        // Nota: Em um app real completo, isso viria do Firestore. 
+        // Aqui, mesclamos o Auth com o que temos localmente ou criamos um novo.
+        const existingLocalData = allUsers.find(u => u.email === firebaseUser.email);
+        
+        const loggedUser: User = existingLocalData ? { ...existingLocalData, id: firebaseUser.uid } : {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'Cliente Hortal',
+          email: firebaseUser.email || formData.email,
+          role: 'customer',
+          cashbackBalance: 0,
+          orderHistory: [],
+          address: { zipCode: '', street: '', number: '', neighborhood: '', city: '', state: '' }
+        };
+
+        setUser(loggedUser);
       }
-    }, 800);
+      
+      setCurrentView('shop');
+      
+    } catch (err: any) {
+      console.error("Firebase Auth Error:", err);
+      setError(getFriendlyErrorMessage(err.code || 'unknown'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
