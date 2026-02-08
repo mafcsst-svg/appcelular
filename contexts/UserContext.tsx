@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { subscribeToFirebase, saveToFirebase } from '../services/firebase';
+import { MOCK_ADMIN } from '../constants';
 
 interface UserContextType {
   user: User | null;
@@ -16,96 +16,55 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-
-  // ---------- state init ----------
-
+  // Inicializa o usuário a partir do localStorage se existir
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('hortal_current_user');
-    return saved ? JSON.parse(saved) : null;
+    const savedUser = localStorage.getItem('hortal_current_user');
+    return savedUser ? JSON.parse(savedUser) : null;
   });
-
-  const [allUsers, setAllUsersState] = useState<User[]>(() => {
-    const saved = localStorage.getItem('hortal_all_users');
-    if (saved) return JSON.parse(saved);
-
+  
+  // Inicializa a lista de usuários a partir do localStorage ou usa mock inicial
+  const [allUsers, setAllUsers] = useState<User[]>(() => {
+    const savedUsers = localStorage.getItem('hortal_all_users');
+    if (savedUsers) {
+      return JSON.parse(savedUsers);
+    }
     return [
       {
-        id: 'c1',
-        name: 'Maria Oliveira',
-        email: 'maria@email.com',
-        password: '123',
-        phone: '(17) 99123-4567',
-        cpf: '123.456.789-00',
-        role: 'customer',
-        cashbackBalance: 15.50,
-        orderHistory: [],
-        address: {
-          zipCode: '14700-000',
-          street: 'Rua das Flores',
-          number: '123',
-          neighborhood: 'Centro',
-          city: 'Bebedouro',
-          state: 'SP'
-        }
+          id: 'c1',
+          name: 'Maria Oliveira',
+          email: 'maria@email.com',
+          password: '123',
+          phone: '(17) 99123-4567',
+          cpf: '123.456.789-00',
+          role: 'customer',
+          cashbackBalance: 15.50,
+          orderHistory: [],
+          address: { zipCode: '14700-000', street: 'Rua das Flores', number: '123', neighborhood: 'Centro', city: 'Bebedouro', state: 'SP' }
+      },
+      {
+          id: 'c2',
+          name: 'José Santos',
+          email: 'jose@email.com',
+          password: '123',
+          phone: '(17) 99876-5432',
+          role: 'customer',
+          cashbackBalance: 5.00,
+          orderHistory: [],
+          address: { zipCode: '14701-000', street: 'Av. Paulista', number: '500', neighborhood: 'Jardim', city: 'Bebedouro', state: 'SP' }
       }
     ];
   });
 
-  const [settings, setSettingsState] = useState(() => {
-    const saved = localStorage.getItem('hortal_settings');
-    return saved ? JSON.parse(saved) : {
-      deliveryFee: 8.5,
-      minOrderValue: 20,
-      cashbackPercentage: 0.05
+  const [settings, setSettings] = useState(() => {
+    const savedSettings = localStorage.getItem('hortal_settings');
+    return savedSettings ? JSON.parse(savedSettings) : {
+      deliveryFee: 8.50,
+      minOrderValue: 20.00,
+      cashbackPercentage: 0.05,
     };
   });
 
-  // ---------- firebase sync (protegido) ----------
-
-  useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
-
-    try {
-      unsubscribe = subscribeToFirebase('users', (data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setAllUsersState(data);
-
-          setUser(current => {
-            if (!current) return null;
-            const found = data.find(u => u.id === current.id);
-            return found ?? current;
-          });
-        }
-      });
-    } catch {
-      console.warn("Firestore ainda não pronto (users)");
-    }
-
-    return () => unsubscribe && unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
-
-    try {
-      unsubscribe = subscribeToFirebase('settings', (data: any) => {
-        if (!data) return;
-
-        if (Array.isArray(data) && data.length > 0) {
-          setSettingsState(data[0]);
-        } else if (!Array.isArray(data)) {
-          setSettingsState(data);
-        }
-      });
-    } catch {
-      console.warn("Firestore ainda não pronto (settings)");
-    }
-
-    return () => unsubscribe && unsubscribe();
-  }, []);
-
-  // ---------- localStorage backup ----------
-
+  // Efeitos para salvar no LocalStorage sempre que houver mudança
   useEffect(() => {
     localStorage.setItem('hortal_all_users', JSON.stringify(allUsers));
   }, [allUsers]);
@@ -122,30 +81,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('hortal_settings', JSON.stringify(settings));
   }, [settings]);
 
-  // ---------- setters com proteção ----------
-
-  const setAllUsers: React.Dispatch<React.SetStateAction<User[]>> = (value) => {
-    setAllUsersState(prev => {
-      const newVal = typeof value === 'function' ? (value as Function)(prev) : value;
-      saveToFirebase('users', newVal).catch(console.error);
-      return newVal;
-    });
-  };
-
-  const setSettings: React.Dispatch<React.SetStateAction<any>> = (value) => {
-    setSettingsState(prev => {
-      const newVal = typeof value === 'function' ? (value as Function)(prev) : value;
-      saveToFirebase('settings', newVal).catch(console.error);
-      return newVal;
-    });
-  };
-
-  // ---------- actions ----------
-
+  // Função para atualizar perfil e garantir que a lista global (allUsers) também seja atualizada
   const updateUserProfile = (updatedUser: User) => {
     setUser(updatedUser);
-    setAllUsers(prev =>
-      prev.map(u => u.id === updatedUser.id ? updatedUser : u)
+    setAllUsers(prevUsers => 
+      prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u)
     );
   };
 
@@ -155,13 +95,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <UserContext.Provider value={{
-      user,
-      setUser,
-      allUsers,
-      setAllUsers,
-      settings,
-      setSettings,
+    <UserContext.Provider value={{ 
+      user, setUser, 
+      allUsers, setAllUsers, 
+      settings, setSettings,
       updateUserProfile,
       logout
     }}>
@@ -171,7 +108,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 export const useUser = () => {
-  const ctx = useContext(UserContext);
-  if (!ctx) throw new Error('useUser must be used within UserProvider');
-  return ctx;
+  const context = useContext(UserContext);
+  if (!context) throw new Error('useUser must be used within a UserProvider');
+  return context;
 };
