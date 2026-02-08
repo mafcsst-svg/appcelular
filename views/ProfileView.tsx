@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, User as UserIcon, MapPin, Loader2, Save, CheckCircle2 } from 'lucide-react';
-import { Button, Input } from '../components/UI';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronLeft, User as UserIcon, MapPin, Loader2, CheckCircle2, Cloud, LogOut } from 'lucide-react';
+import { Input, Button } from '../components/UI';
 import { useUser } from '../contexts/UserContext';
 import { useOrder } from '../contexts/OrderContext';
 import { ViewState } from '../types';
 
 export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState) => void }) => {
-  const { user, updateUserProfile } = useUser();
+  const { user, updateUserProfile, logout } = useUser();
   const { cart } = useOrder();
-  const [isSaving, setIsSaving] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  
+  // Status de salvamento
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'typing'>('saved');
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   
+  // Inicialização do form
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -28,26 +30,40 @@ export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState)
     }
   });
 
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        name: user.name,
-        email: user.email,
-        phone: user.phone || '',
-        cpf: user.cpf || '',
-        address: {
-          zipCode: user.address?.zipCode || '',
-          street: user.address?.street || '',
-          number: user.address?.number || '',
-          complement: user.address?.complement || '',
-          neighborhood: user.address?.neighborhood || '',
-          city: user.address?.city || '',
-          state: user.address?.state || ''
-        }
-      }));
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
     }
-  }, [user]);
+
+    setSaveStatus('saving');
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      if (user) {
+        const updatedUser = {
+          ...user,
+          ...formData
+        };
+        updateUserProfile(updatedUser);
+        setSaveStatus('saved');
+      }
+    }, 800);
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [formData, updateUserProfile]);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleAddressChange = async (field: string, value: string) => {
     setFormData((prev: any) => ({
@@ -84,49 +100,49 @@ export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState)
     }
   };
 
-  const handleSave = () => {
-    if (!user) return;
-    
-    setIsSaving(true);
-    
-    // Cria o objeto de usuário atualizado mantendo ID e outros campos
-    const updatedUser = {
-      ...user,
-      ...formData
-    };
-
-    // Usa a função do contexto que atualiza tanto a sessão quanto a lista persistida
-    updateUserProfile(updatedUser);
-    
-    setTimeout(() => {
-      setIsSaving(false);
-      setShowSuccess(true);
-      
-      setTimeout(() => {
-        setShowSuccess(false);
-        if (cart.length > 0) {
-          setCurrentView('cart');
-        } else {
-          setCurrentView('shop');
-        }
-      }, 1000);
-    }, 800);
+  const handleLogout = () => {
+      logout();
+      setCurrentView('shop');
   };
 
+  if (!user) {
+      return (
+          <div className="flex flex-col items-center justify-center h-screen p-6 text-center">
+              <UserIcon size={48} className="text-stone-300 mb-4" />
+              <h2 className="text-xl font-bold text-stone-800">Faça Login</h2>
+              <p className="text-stone-500 mb-6">Acesse seu perfil para gerenciar seus dados.</p>
+              <Button onClick={() => setCurrentView('login')}>Entrar Agora</Button>
+          </div>
+      )
+  }
+
   return (
-    <div className="bg-stone-50 min-h-screen pb-24">
-       <div className="bg-white p-4 sticky top-0 z-10 shadow-sm flex items-center justify-between">
+    <div className="bg-stone-50 min-h-screen pb-32">
+       <div className="bg-white p-4 sticky top-0 z-30 shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => setCurrentView(cart.length > 0 ? 'cart' : 'shop')} className="p-2 hover:bg-stone-100 rounded-full">
+            <button onClick={() => setCurrentView('shop')} className="p-2 hover:bg-stone-100 rounded-full">
               <ChevronLeft size={24} className="text-stone-600" />
             </button>
-            <h1 className="text-lg font-bold text-stone-800">Meu Perfil</h1>
+            <div>
+                <h1 className="text-lg font-bold text-stone-800 leading-none">Meu Perfil</h1>
+                <p className="text-[10px] text-stone-400 font-medium mt-0.5">Edição em tempo real</p>
+            </div>
           </div>
-          {showSuccess && (
-            <span className="text-sm text-green-600 font-medium flex items-center gap-1 animate-fade-in bg-green-50 px-3 py-1 rounded-full border border-green-200">
-                <CheckCircle2 size={16} /> Salvo
-            </span>
-          )}
+          
+          <div className="flex items-center gap-2">
+            {saveStatus === 'saving' && (
+                <div className="flex items-center gap-1.5 text-stone-400 bg-stone-50 px-3 py-1.5 rounded-full border border-stone-100">
+                    <Loader2 size={12} className="animate-spin" />
+                    <span className="text-xs font-bold">Salvando...</span>
+                </div>
+            )}
+            {saveStatus === 'saved' && (
+                <div className="flex items-center gap-1.5 text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-100 transition-all animate-fade-in">
+                    <CheckCircle2 size={12} />
+                    <span className="text-xs font-bold">Salvo</span>
+                </div>
+            )}
+          </div>
        </div>
 
        <div className="p-4 space-y-6">
@@ -139,27 +155,27 @@ export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState)
              <Input 
                label="Nome Completo" 
                value={formData.name} 
-               onChange={(e: any) => setFormData({...formData, name: e.target.value})} 
+               onChange={(e: any) => handleInputChange('name', e.target.value)} 
              />
              <div className="flex gap-2">
                <Input 
                  label="Telefone (Opcional)" 
                  value={formData.phone} 
-                 onChange={(e: any) => setFormData({...formData, phone: e.target.value})} 
+                 onChange={(e: any) => handleInputChange('phone', e.target.value)} 
                  placeholder="(00) 00000-0000"
                />
                <Input 
                  label="E-mail" 
                  value={formData.email} 
-                 onChange={(e: any) => setFormData({...formData, email: e.target.value})} 
+                 onChange={(e: any) => handleInputChange('email', e.target.value)} 
                  readOnly={true}
-                 className="opacity-70 bg-stone-50"
+                 className="opacity-70 bg-stone-50 cursor-not-allowed"
                />
              </div>
              <Input 
                label="CPF" 
                value={formData.cpf} 
-               onChange={(e: any) => setFormData({...formData, cpf: e.target.value})} 
+               onChange={(e: any) => handleInputChange('cpf', e.target.value)} 
              />
           </div>
 
@@ -231,10 +247,15 @@ export const ProfileView = ({ setCurrentView }: { setCurrentView: (v: ViewState)
                </div>
              </div>
           </div>
-
-          <Button onClick={handleSave} className="w-full" isLoading={isSaving}>
-            <Save size={18} /> Salvar Alterações
+          
+          <Button onClick={handleLogout} variant="danger" className="w-full">
+             <LogOut size={18} /> Sair da Conta
           </Button>
+
+          <div className="text-center text-xs text-stone-400 flex items-center justify-center gap-2 pb-6">
+            <Cloud size={14} />
+            <span>Suas alterações são salvas automaticamente.</span>
+          </div>
        </div>
     </div>
   );

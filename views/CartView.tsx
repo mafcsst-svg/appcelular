@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   ChevronLeft, ShoppingBag, Truck, MapPin, Store, Phone, 
   QrCode, Banknote, CreditCard, Copy, Minus, Plus, Coins,
-  CreditCard as CardIcon, Apple, UtensilsCrossed, AlertCircle, ArrowRight
+  CreditCard as CardIcon, Apple, UtensilsCrossed, AlertCircle, ArrowRight, LogIn
 } from 'lucide-react';
 import { Button, Input } from '../components/UI';
 import { useUser } from '../contexts/UserContext';
@@ -37,6 +37,11 @@ export const CartView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =>
   }, [user]);
 
   const handleFinishOrder = () => {
+    if (!user) {
+        setCurrentView('login');
+        return;
+    }
+
     const earned = !useCashback ? subtotal * settings.cashbackPercentage : 0;
     
     const newOrder: Order = {
@@ -190,12 +195,16 @@ export const CartView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =>
                       <p className="text-[10px] text-stone-500">Saldo disponível: <span className="font-bold">{formatCurrency(user?.cashbackBalance || 0)}</span></p>
                    </div>
                 </div>
-                <button 
-                  onClick={() => setUseCashback(!useCashback)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${useCashback ? 'bg-brand-500' : 'bg-stone-200'}`}
-                >
-                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useCashback ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
+                {user ? (
+                    <button 
+                    onClick={() => setUseCashback(!useCashback)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${useCashback ? 'bg-brand-500' : 'bg-stone-200'}`}
+                    >
+                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useCashback ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                ) : (
+                    <span className="text-[10px] text-stone-400 font-medium">Faça login para usar</span>
+                )}
              </div>
              {useCashback && (
                 <div className="bg-amber-50 text-amber-700 px-3 py-2 rounded-xl text-xs font-medium border border-amber-100 flex justify-between">
@@ -228,40 +237,48 @@ export const CartView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =>
                       <h3 className="text-sm font-bold text-stone-800 flex items-center gap-2">
                         <MapPin size={16} className="text-brand-500" /> Endereço de Entrega
                       </h3>
-                      <button onClick={() => setCurrentView('profile')} className="text-xs font-bold text-brand-500 bg-brand-50 px-3 py-1.5 rounded-lg border border-brand-100">Editar</button>
+                      {user && <button onClick={() => setCurrentView('profile')} className="text-xs font-bold text-brand-500 bg-brand-50 px-3 py-1.5 rounded-lg border border-brand-100">Editar</button>}
                    </div>
-                   {hasSomeAddress ? (
-                      <div className="text-sm text-stone-500 leading-relaxed bg-stone-50 p-3 rounded-xl border border-stone-100 relative overflow-hidden">
-                         {!isAddressComplete && (
-                           <div className="absolute top-0 right-0 bg-red-100 text-red-600 px-2 py-1 rounded-bl-lg text-[10px] font-bold flex items-center gap-1">
-                             <AlertCircle size={10} /> Incompleto
-                           </div>
-                         )}
-                         <p className="font-bold text-stone-700">
-                           {user?.address?.street || <span className="text-red-400 italic">Rua não informada</span>}, 
-                           {' '}
-                           {user?.address?.number || <span className="text-red-400 italic">S/N</span>}
-                         </p>
-                         <p>{user?.address?.neighborhood} - {user?.address?.city}/{user?.address?.state}</p>
-                         <p className="text-xs mt-1 text-stone-400">CEP: {user?.address?.zipCode}</p>
-                         
-                         {!isAddressComplete && (
-                           <button onClick={() => setCurrentView('profile')} className="mt-2 text-xs text-red-500 font-bold underline">
-                             Clique para completar o endereço
-                           </button>
-                         )}
-                      </div>
+                   {user ? (
+                        hasSomeAddress ? (
+                            <div className="text-sm text-stone-500 leading-relaxed bg-stone-50 p-3 rounded-xl border border-stone-100 relative overflow-hidden">
+                                {!isAddressComplete && (
+                                <div className="absolute top-0 right-0 bg-red-100 text-red-600 px-2 py-1 rounded-bl-lg text-[10px] font-bold flex items-center gap-1">
+                                    <AlertCircle size={10} /> Incompleto
+                                </div>
+                                )}
+                                <p className="font-bold text-stone-700">
+                                {user.address?.street || <span className="text-red-400 italic">Rua não informada</span>}, 
+                                {' '}
+                                {user.address?.number || <span className="text-red-400 italic">S/N</span>}
+                                </p>
+                                <p>{user.address?.neighborhood} - {user.address?.city}/{user.address?.state}</p>
+                                <p className="text-xs mt-1 text-stone-400">CEP: {user.address?.zipCode}</p>
+                                
+                                {!isAddressComplete && (
+                                <button onClick={() => setCurrentView('profile')} className="mt-2 text-xs text-red-500 font-bold underline">
+                                    Clique para completar o endereço
+                                </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-brand-50 border border-brand-100 rounded-xl space-y-3 animate-pulse">
+                                <div className="flex gap-2 text-brand-500">
+                                    <AlertCircle size={20} className="flex-shrink-0" />
+                                    <p className="text-xs font-bold">Endereço Incompleto!</p>
+                                </div>
+                                <p className="text-xs text-brand-500">Cadastre seu endereço para que possamos realizar a entrega do seu pedido.</p>
+                                <Button onClick={() => setCurrentView('profile')} className="w-full py-2 text-xs bg-brand-500 hover:bg-brand-600 shadow-none">
+                                    Cadastrar Endereço <ArrowRight size={14} />
+                                </Button>
+                            </div>
+                        )
                    ) : (
-                      <div className="p-4 bg-brand-50 border border-brand-100 rounded-xl space-y-3 animate-pulse">
-                         <div className="flex gap-2 text-brand-500">
-                            <AlertCircle size={20} className="flex-shrink-0" />
-                            <p className="text-xs font-bold">Endereço Incompleto!</p>
-                         </div>
-                         <p className="text-xs text-brand-500">Cadastre seu endereço para que possamos realizar a entrega do seu pedido.</p>
-                         <Button onClick={() => setCurrentView('profile')} className="w-full py-2 text-xs bg-brand-500 hover:bg-brand-600 shadow-none">
-                            Cadastrar Endereço <ArrowRight size={14} />
-                         </Button>
-                      </div>
+                       <div className="p-6 bg-stone-50 border border-stone-100 rounded-xl flex flex-col items-center justify-center text-center">
+                            <MapPin size={32} className="text-stone-300 mb-2"/>
+                            <p className="text-sm text-stone-500 mb-3">Faça login para selecionar seu endereço de entrega.</p>
+                            <Button onClick={() => setCurrentView('login')} className="w-full text-xs" variant="secondary">Entrar Agora</Button>
+                       </div>
                    )}
                 </div>
              ) : (
@@ -311,17 +328,24 @@ export const CartView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =>
                <span className="font-bold text-lg text-stone-800">Total</span>
                <span className="font-bold text-2xl text-stone-800">{formatCurrency(total)}</span>
              </div>
-             <Button 
-                onClick={handleFinishOrder} 
-                className="w-full mt-4 bg-brand-500 hover:bg-brand-600" 
-                disabled={
-                   (total > 0 && paymentMethod === 'card' && !cardType) || 
-                   (total > 0 && paymentMethod === 'money' && (parseFloat(cashGiven.replace(',','.')) || 0) < total) ||
-                   (fulfillmentMethod === 'delivery' && !isAddressComplete)
-                }
-             >
-                {fulfillmentMethod === 'delivery' && !isAddressComplete ? 'Completar Endereço' : 'Confirmar Pedido'}
-             </Button>
+             
+             {user ? (
+                 <Button 
+                    onClick={handleFinishOrder} 
+                    className="w-full mt-4 bg-brand-500 hover:bg-brand-600" 
+                    disabled={
+                       (total > 0 && paymentMethod === 'card' && !cardType) || 
+                       (total > 0 && paymentMethod === 'money' && (parseFloat(cashGiven.replace(',','.')) || 0) < total) ||
+                       (fulfillmentMethod === 'delivery' && !isAddressComplete)
+                    }
+                 >
+                    {fulfillmentMethod === 'delivery' && !isAddressComplete ? 'Completar Endereço' : 'Confirmar Pedido'}
+                 </Button>
+             ) : (
+                 <Button onClick={() => setCurrentView('login')} className="w-full mt-4 bg-stone-800 hover:bg-stone-900">
+                    <LogIn size={18} /> Entrar para Finalizar
+                 </Button>
+             )}
           </div>
        </div>
     </div>

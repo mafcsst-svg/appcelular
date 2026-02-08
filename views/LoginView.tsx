@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Store, User as UserIcon, Mail, Lock, Phone, AlertCircle } from 'lucide-react';
+import { Store, User as UserIcon, Mail, Lock, Phone, AlertCircle, X } from 'lucide-react';
 import { Button, Input } from '../components/UI';
 import { APP_NAME } from '../constants';
 import { useUser } from '../contexts/UserContext';
@@ -72,6 +72,15 @@ export const LoginView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =
           <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] bg-brand-500 rounded-full blur-[120px]" />
           <div className="absolute bottom-[-20%] right-[-20%] w-[500px] h-[500px] bg-blue-600 rounded-full blur-[120px]" />
        </div>
+       
+       <button 
+         onClick={() => setCurrentView('shop')}
+         className="absolute top-6 right-6 p-2 bg-stone-800/50 rounded-full text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all z-20 backdrop-blur-md border border-stone-700"
+         title="Continuar sem login"
+       >
+         <X size={24} />
+       </button>
+
        <div className="z-10 w-full max-w-sm flex-1 flex flex-col justify-center">
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-stone-800 rounded-2xl mx-auto flex items-center justify-center mb-6 border border-stone-700"><Store size={40} className="text-brand-500" /></div>

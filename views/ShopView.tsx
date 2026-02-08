@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Store, MessageSquare, Truck, User as UserIcon, LogOut, Coins, Search, Plus, Minus } from 'lucide-react';
+import { Store, Coins, Search, Plus, Minus, LogIn } from 'lucide-react';
 import { APP_NAME, APP_SUBTITLE } from '../constants';
-import { Product, ProductCategory, ViewState, Order } from '../types';
+import { Product, ProductCategory, ViewState } from '../types';
 import { useUser } from '../contexts/UserContext';
 import { useProducts } from '../contexts/ProductContext';
 import { useOrder } from '../contexts/OrderContext';
@@ -50,39 +50,15 @@ const ProductRow = ({ product, cart, addToCart, updateCartQuantity, updateObserv
                   )}
                </div>
             </div>
-
-            {quantity > 0 && (
-              <button 
-                onClick={() => setShowObs(!showObs)} 
-                className={`absolute top-2 right-2 p-1.5 rounded-full border transition-all ${showObs ? 'bg-brand-50 border-brand-200 text-brand-500' : 'bg-white border-stone-200 text-stone-400'}`}
-                title="Adicionar observação"
-              >
-                <MessageSquare size={14} />
-              </button>
-            )}
-
-            {quantity > 0 && showObs && (
-              <div className="absolute top-[calc(100%-8px)] left-4 right-4 z-20 animate-fade-in">
-                 <input 
-                   type="text" 
-                   autoFocus
-                   placeholder="Algum detalhe? Ex: Sem cebola..."
-                   className="w-full text-xs py-2 px-3 bg-stone-50 border border-stone-200 rounded-lg outline-none shadow-lg focus:border-brand-500"
-                   value={cartItem?.observation || ''}
-                   onChange={(e) => updateObservation(product.id, e.target.value)}
-                   onBlur={() => !cartItem?.observation && setShowObs(false)}
-                 />
-              </div>
-            )}
        </div>
     </div>
   );
 };
 
 export const ShopView = ({ setCurrentView }: { setCurrentView: (v: ViewState) => void }) => {
-  const { user, logout } = useUser();
+  const { user } = useUser();
   const { products } = useProducts();
-  const { cart, orders, addToCart, updateCartQuantity, updateObservation } = useOrder();
+  const { cart, addToCart, updateCartQuantity, updateObservation } = useOrder();
   
   const [category, setCategory] = useState<ProductCategory | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,19 +72,13 @@ export const ShopView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =>
     });
   }, [category, searchTerm, products]);
 
-  const activeOrdersCount = orders.filter((o: Order) => o.status !== 'completed' && o.status !== 'cancelled').length;
   const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
-  const handleLogout = () => {
-    if (logout) logout();
-    setCurrentView('login');
-  };
-
   return (
-    <div className="h-screen flex flex-col bg-stone-50">
+    <div className="h-screen flex flex-col bg-stone-50 pb-[80px]">
        <div className="bg-white shadow-sm z-30 flex-shrink-0">
          <div className="p-4 pb-2 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -120,42 +90,34 @@ export const ShopView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =>
                 <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">{APP_SUBTITLE}</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            
+            {!user && (
                 <button 
-                  onClick={() => setCurrentView('chat')} 
-                  className="p-2.5 bg-stone-100 rounded-full hover:bg-brand-50 hover:text-brand-500 transition-colors relative"
+                  onClick={() => setCurrentView('login')}
+                  className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-stone-800 transition-colors shadow-lg shadow-stone-200"
                 >
-                  <MessageSquare size={20} className="text-stone-600" />
+                    <LogIn size={16} /> Entrar
                 </button>
-                {activeOrdersCount > 0 && (
-                  <button onClick={() => setCurrentView('order-tracking')} className="p-2.5 bg-brand-50 text-brand-500 rounded-full animate-pulse border border-brand-100">
-                    <Truck size={20} />
-                  </button>
-                )}
-                <button onClick={() => setCurrentView('profile')} className="p-2.5 bg-stone-100 rounded-full hover:bg-stone-200 transition-all">
-                  <UserIcon size={20} className="text-stone-600"/>
-                </button>
-                <button 
-                  onClick={handleLogout} 
-                  className="p-2.5 bg-stone-100 rounded-full hover:bg-red-50 hover:text-red-500 transition-all"
-                  title="Sair"
-                >
-                  <LogOut size={20} />
-                </button>
-            </div>
+            )}
          </div>
 
          <div className="px-4 py-2 bg-stone-50 flex items-center justify-between border-y border-stone-100">
-            <div className="flex items-center gap-2">
-               <div className="w-6 h-6 rounded-full bg-stone-200 flex items-center justify-center text-stone-600 overflow-hidden">
-                  <UserIcon size={14} />
-               </div>
-               <span className="text-xs font-bold text-stone-800">Olá, {user?.name.split(' ')[0]}</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-2 py-1 rounded-lg border border-amber-200 shadow-sm">
-               <Coins size={12} className="text-amber-500" />
-               <span className="text-[10px] font-black">{formatCurrency(user?.cashbackBalance || 0)}</span>
-            </div>
+            {user ? (
+                <>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-stone-800">Olá, {user.name.split(' ')[0]}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-2 py-1 rounded-lg border border-amber-200 shadow-sm">
+                    <Coins size={12} className="text-amber-500" />
+                    <span className="text-[10px] font-black">{formatCurrency(user.cashbackBalance || 0)}</span>
+                </div>
+                </>
+            ) : (
+                <div className="flex items-center gap-2 w-full justify-between">
+                    <span className="text-xs text-stone-500 italic">Bem-vindo(a) à nossa loja!</span>
+                    <span className="text-[10px] bg-brand-50 text-brand-600 px-2 py-1 rounded-lg font-bold border border-brand-100">Login para cashback</span>
+                </div>
+            )}
          </div>
 
          <div className="px-4 py-4">
@@ -205,10 +167,10 @@ export const ShopView = ({ setCurrentView }: { setCurrentView: (v: ViewState) =>
        </div>
 
        {cart.length > 0 && (
-         <div className="fixed bottom-0 left-0 w-full p-4 bg-white/80 backdrop-blur-md z-40 border-t border-stone-100">
+         <div className="fixed bottom-[70px] left-0 w-full px-4 z-40">
             <button 
               onClick={() => setCurrentView('cart')} 
-              className="w-full bg-brand-500 text-white p-4 rounded-2xl shadow-xl flex justify-between items-center font-bold active:scale-95 transition-all hover:bg-brand-600"
+              className="w-full bg-brand-500 text-white p-4 rounded-2xl shadow-xl flex justify-between items-center font-bold active:scale-95 transition-all hover:bg-brand-600 animate-slide-up"
             >
                <div className="flex items-center gap-3">
                  <div className="bg-brand-600 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black border border-brand-400">
