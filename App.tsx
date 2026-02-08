@@ -12,14 +12,17 @@ import { OrderTrackingView, SuccessView } from './views/OrderTrackingView';
 import { ProfileView } from './views/ProfileView';
 import { ChatView } from './views/ChatView';
 import { AdminView } from './views/AdminView';
+import { BottomNav } from './components/BottomNav';
 
 // Router Component to handle view switching
 const AppRouter = () => {
-  const [currentView, setCurrentView] = useState<ViewState>('login');
+  const [currentView, setCurrentView] = useState<ViewState>('shop');
   const { earnedCashback } = useOrder();
 
+  const showBottomNav = ['shop', 'order-tracking', 'profile', 'chat'].includes(currentView);
+
   return (
-    <>
+    <div className="bg-stone-50 min-h-screen">
       {currentView === 'login' && <LoginView setCurrentView={setCurrentView} />}
       {currentView === 'shop' && <ShopView setCurrentView={setCurrentView} />}
       {currentView === 'cart' && <CartView setCurrentView={setCurrentView} />}
@@ -28,7 +31,9 @@ const AppRouter = () => {
       {currentView === 'chat' && <ChatView setCurrentView={setCurrentView} />}
       {currentView === 'order-tracking' && <OrderTrackingView setCurrentView={setCurrentView} />}
       {currentView === 'admin' && <AdminView setCurrentView={setCurrentView} />}
-    </>
+      
+      {showBottomNav && <BottomNav currentView={currentView} setCurrentView={setCurrentView} />}
+    </div>
   );
 };
 
